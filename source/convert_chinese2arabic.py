@@ -15,6 +15,8 @@ def convertChineseDigitsToArabic (chinese_digits, encoding="utf-8"):
     result  = 0
     tmp     = 0
     hnd_mln = 0
+    if chinese_digits == None:
+        return -1
     for count in range(len(chinese_digits)):
         curr_char  = chinese_digits[count]
         curr_digit = chs_arabic_map.get(curr_char, None)

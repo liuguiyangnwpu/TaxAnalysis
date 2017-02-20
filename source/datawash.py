@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import sys
 import codecs
 import pickle as pkl
-from .convert_chinese2arabic import convertChineseDigitsToArabic
+import pprint
+import source.convert_chinese2arabic as chinese2arabic
 
 def open_excel(file='file.xls'):
     try:
@@ -35,16 +36,26 @@ def excel_table_byname(file='file.xls', colnameindex=0, by_name=u'Sheet1'):
     return list
 
 def processLabels():
-   tables = excel_table_byname(file=u'../data/案例报告.xlsx')
-   labels = []
-   for row in tables:
-       line = re.split(',|，|。|：', row["法规意见"].strip())
-       ReLawname01 = re.compile(r'《[^》《]*\》[\u4e00-\u9fa5]{3,5}')
-       ReLawname02 = re.compile(r'国家税务总局关于纳税人善意取得虚开增值税专用发票处理问题的通知[\u4e00-\u9fa5]{3,5}')
-       ReLawname03 = re.compile(r'([《]\S+?[》])(?:（\S+?）)([\u4e00-\u9fa50-9]{3,7})')
-       ReLawname04 = re.compile(r'([《]\S+?[》])(?:\[\S+?\])([\u4e00-\u9fa50-9]{3,7})')
-       labels.append([])
-       for item in line:
+    def convetTuple2Str(item):
+        if isinstance(item, tuple):
+            return [''.join(item)]
+        if isinstance(item, list):
+            for ind, cell in enumerate(item):
+                if isinstance(cell, tuple):
+                    item[ind] = ''.join(cell)
+                if isinstance(cell, str):
+                    item[ind] = cell.replace(' ', '')
+        return item
+    tables = excel_table_byname(file=u'../data/案例报告.xlsx')
+    labels = []
+    for row in tables:
+        line = re.split(',|，|。|：', row["法规意见"].strip())
+        ReLawname01 = re.compile(r'《[^》《]*\》[\u4e00-\u9fa5]{3,5}')
+        ReLawname02 = re.compile(r'国家税务总局关于纳税人善意取得虚开增值税专用发票处理问题的通知[\u4e00-\u9fa5]{3,5}')
+        ReLawname03 = re.compile(r'([《]\S+?[》])(?:（\S+?）)([\u4e00-\u9fa50-9]{3,7})')
+        ReLawname04 = re.compile(r'([《]\S+?[》])(?:\[\S+?\])([\u4e00-\u9fa50-9]{3,7})')
+        labels.append([])
+        for item in line:
            res01 = ReLawname01.findall(item)
            if len(res01) == 0:
                res02 = ReLawname02.findall(item)
@@ -53,19 +64,77 @@ def processLabels():
                    if len(res03) == 0:
                        res04 = ReLawname04.findall(item)
                        if len(res04) != 0:
+                           res04 = convetTuple2Str(res04)
                            labels[-1].extend(res04)
                        else:
                            pass
                    else:
+                       res03 = convetTuple2Str(res03)
                        labels[-1].extend(res03)
                else:
+                   res02 = convetTuple2Str(res02)
                    labels[-1].extend(res02)
            else:
+               res01 = convetTuple2Str(res01)
                labels[-1].extend(res01)
-   return fetchSampleLabel(labels)
+    return fetchSampleLabel(labels)
 
 def fetchSampleLabel(labels):
-    pass
+    with codecs.open("../data/law.pkl", 'rb') as handle:
+        lawDict = pkl.load(handle)
+        # pprint.pprint(lawDict)
+    def fetchLawID(lawName):
+        if lawName in lawDict.keys():
+            return lawDict[lawName]
+        return lawName
+
+    def extractDetailedRules(detailedRule):
+        ReDetailRule01 = re.compile(r'第[\u4e00-\u9fa50-9]{1,4}')
+        ReDetailRule02 = re.compile(r'第[\u4e00-\u9fa50-9]{1,4}条+')
+        if u'款' in detailedRule:
+            detailedRule = detailedRule.replace(u'款', u'条')
+        if u'项' in detailedRule:
+            detailedRule = detailedRule.replace(u'项', u'条')
+        if u'条' in detailedRule:
+            rs = ReDetailRule02.findall(detailedRule)
+        else:
+            rs = ReDetailRule01.findall(detailedRule)
+        if len(rs) >= 1:
+            return rs[0]
+        return None
+    data_labels = []
+    writeHandle = open("../data/samples.label", 'w')
+    standard_sys_stdout = sys.stdout
+    sys.stdout = writeHandle
+    for ind, item in enumerate(labels):
+        tmp = []
+        for cell in item:
+            try:
+                cells = cell.split('》')
+            except Exception as msg:
+                print(cell, msg)
+            if len(cells) == 2:
+                lawName, detailedRule = cells[0] + "》", cells[1]
+            elif len(cells) == 1:
+                lawName, detailedRule = cells[0] + "》", None
+            if lawName == "国家税务总局关于纳税人善意取得虚开增值税专用发票处理问题的通知第二款之规》":
+                lawName = "《国家税务总局关于纳税人善意取得虚开增值税专用发票处理问题的通知》"
+                detailedRule = "第二条"
+            detailedRule = extractDetailedRules(detailedRule)
+            ruleID = chinese2arabic.convertChineseDigitsToArabic(detailedRule)
+            lawID = fetchLawID(lawName)
+            if isinstance(lawID, str):
+                continue
+            if ruleID != -1:
+                tmp.append(str(lawID) + "-" + str(ruleID))
+            else:
+                tmp.append(str(lawID))
+            # print(lawID, detailedRule, ruleID)
+        data_labels.append(tmp)
+        print(ind+1, *tmp)
+    writeHandle.close()
+    sys.stdout = standard_sys_stdout
+    # pprint.pprint(data_labels)
 
 def processSamples():
     def dealItem(infolist):
@@ -128,10 +197,12 @@ def build_law_label():
         for line in handle:
             line = line.strip()
             law_dict[line] = ind
+            ind += 1
     with codecs.open("../data/law.pkl", 'wb') as handle:
         pkl.dump(law_dict, handle)
 
 if __name__=="__main__":
     # samples = processSamples()
     # statisticsEvent(samples)
-    build_law_label()
+    # build_law_label()
+    processLabels()
