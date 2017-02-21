@@ -45,6 +45,8 @@ def processLabels():
                     item[ind] = ''.join(cell)
                 if isinstance(cell, str):
                     item[ind] = cell.replace(' ', '')
+                if isinstance(cell, str):
+                    item[ind] = cell.replace("中华人民共和国", "")
         return item
     tables = excel_table_byname(file=u'../data/案例报告.xlsx')
     labels = []
@@ -200,6 +202,8 @@ def build_law_label():
             ind += 1
     with codecs.open("../data/law.pkl", 'wb') as handle:
         pkl.dump(law_dict, handle)
+    for key, val in law_dict.items():
+        print(key, val)
 
 if __name__=="__main__":
     # samples = processSamples()
