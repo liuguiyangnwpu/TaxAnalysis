@@ -3,3 +3,6 @@ data/*.xlsx
 data/*.doc
 .DS_Store
 .idea
+*.doc
+*.docx
+*.xlsx
