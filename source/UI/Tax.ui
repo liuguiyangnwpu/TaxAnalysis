@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>874</width>
+    <width>724</width>
     <height>750</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>税务分析v1.0</string>
+   <string>税务大数据分析v1.0</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_10">
    <item>

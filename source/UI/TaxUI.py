@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(874, 750)
+        Form.resize(724, 750)
         self.verticalLayout_10 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_10.setObjectName("verticalLayout_10")
         self.widget_train = QtWidgets.QWidget(Form)
@@ -184,7 +184,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "税务分析v1.0"))
+        Form.setWindowTitle(_translate("Form", "税务大数据分析v1.0"))
         self.label.setText(_translate("Form", "<html><head/><body><p align=\"center\">训练区</p></body></html>"))
         self.pushButton_loadSample.setText(_translate("Form", "数据导入"))
         self.pushButton_startTrain.setText(_translate("Form", "开始训练"))

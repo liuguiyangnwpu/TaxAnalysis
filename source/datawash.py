@@ -10,6 +10,7 @@ import sys
 import codecs
 import pickle as pkl
 import pprint
+import numpy as np
 import source.convert_chinese2arabic as chinese2arabic
 
 def open_excel(file='file.xls'):
@@ -35,7 +36,7 @@ def excel_table_byname(file='file.xls', colnameindex=0, by_name=u'Sheet1'):
              list.append(app)
     return list
 
-def processLabels():
+def processLabels(filename, tables):
     def convetTuple2Str(item):
         if isinstance(item, tuple):
             return [''.join(item)]
@@ -48,7 +49,7 @@ def processLabels():
                 if isinstance(cell, str):
                     item[ind] = cell.replace("中华人民共和国", "")
         return item
-    tables = excel_table_byname(file=u'../data/案例报告.xlsx')
+
     labels = []
     for row in tables:
         line = re.split(',|，|。|：', row["法规意见"].strip())
@@ -79,10 +80,11 @@ def processLabels():
            else:
                res01 = convetTuple2Str(res01)
                labels[-1].extend(res01)
-    return fetchSampleLabel(labels)
+    return fetchSampleLabel(labels, filename)
 
-def fetchSampleLabel(labels):
-    with codecs.open("../data/law.pkl", 'rb') as handle:
+def fetchSampleLabel(labels, filename):
+    filename = '/'.join(filename.split('/')[:-1]) + "/law.pkl"
+    with codecs.open(filename, 'rb') as handle:
         lawDict = pkl.load(handle)
         # pprint.pprint(lawDict)
     def fetchLawID(lawName):
@@ -104,12 +106,14 @@ def fetchSampleLabel(labels):
         if len(rs) >= 1:
             return rs[0]
         return None
-    data_labels = []
-    writeHandle = open("../data/samples.label", 'w')
+
+    str_labels, data_labels = [], []
+    savepath = '/'.join(filename.split('/')[:-1]) + "/samples.label"
+    writeHandle = open(savepath, 'w')
     standard_sys_stdout = sys.stdout
     sys.stdout = writeHandle
     for ind, item in enumerate(labels):
-        tmp = []
+        str_tmp, tmp = [], []
         for cell in item:
             try:
                 cells = cell.split('》')
@@ -129,16 +133,20 @@ def fetchSampleLabel(labels):
                 continue
             if ruleID != -1:
                 tmp.append(str(lawID) + "-" + str(ruleID))
+                str_tmp.append(lawName + detailedRule)
             else:
                 tmp.append(str(lawID))
+                str_tmp.append(lawName)
             # print(lawID, detailedRule, ruleID)
         data_labels.append(tmp)
+        str_labels.append(str_tmp)
         print(ind+1, *tmp)
     writeHandle.close()
     sys.stdout = standard_sys_stdout
     # pprint.pprint(data_labels)
+    return str_labels, data_labels
 
-def processSamples():
+def processSamples(tables):
     def dealItem(infolist):
         reslist = []
         downalpha = [chr(c + ord('a')) for c in range(0, 26)]
@@ -155,19 +163,50 @@ def processSamples():
                 reslist.append(item)
         return reslist
 
-    tables = excel_table_byname(file=u'../data/案例报告.xlsx')
     samples = []
     for row in tables:
         line = re.split('\r\n', row["违法事实"].strip())
-        rowsInfo,washInfo = [], []
+        rowsInfo, washInfo = [], []
         for item in line:
-            rowsInfo.append([])
-            rowsInfo[-1].extend(re.split(',|，|。|：', item.strip()))
-            tmp = dealItem(rowsInfo[-1])
-            if len(tmp) > 0:
-                washInfo.append(tmp[-1])
+            rowsInfo.extend(re.split(',|，|。|：', item.strip()))
+        washInfo = dealItem(rowsInfo)
         samples.append(washInfo)
     return samples
+
+# 提取特征
+def ext_feature(tables, trainDir):
+    # textfile      训练样本文件
+    # dicfile       结巴分词字典路径
+    # keywordsfile  关键词路径
+    dicfile = trainDir + "lawdict.txt"
+    keywordsfile = trainDir + "keywords.txt"
+    jieba.load_userdict(dicfile)
+    samplecount = len(tables)  # 样本个数
+    keywords = read_keywords(keywordsfile=keywordsfile)
+    featlen = len(keywords)  # 特征维数
+
+    # print(samplecount, featlen)
+    features = []
+    for row in tables:
+        line = ','.join(row) + "."
+        tags = jieba.analyse.extract_tags(line)
+        features.append(tags)
+
+    return features
+
+#读取关键词
+def read_keywords(keywordsfile=u'keywords.txt', keywordindex=0):
+    #keywordsfile  结巴分词字典路径
+    #keywordindex  关键词所在的列
+    keywords = {}
+    with codecs.open(keywordsfile, 'r', 'utf-8') as f:
+        all_the_text = f.readlines()
+        index = 0
+        for item in all_the_text:
+            tmp = (item.strip()).split(' ')
+            keywords[tmp[keywordindex]] = index
+            index += 1
+    return keywords
 
 def statisticsEvent(samples):
     jieba.load_userdict("../data/laxdict.txt")
@@ -191,8 +230,7 @@ def statisticsEvent(samples):
     # plt.show()
     # print(pd_data)
 
-def build_law_label():
-    filepath = "../data/law.info"
+def build_law_label(filepath):
     ind = 1
     law_dict = {}
     with codecs.open(filepath, 'r', 'utf-8') as handle:
@@ -200,10 +238,11 @@ def build_law_label():
             line = line.strip()
             law_dict[line] = ind
             ind += 1
-    with codecs.open("../data/law.pkl", 'wb') as handle:
+    filepath = filepath.replace(".info", ".pkl")
+    with codecs.open(filepath, 'wb') as handle:
         pkl.dump(law_dict, handle)
-    for key, val in law_dict.items():
-        print(key, val)
+    # for key, val in law_dict.items():
+    #     print(key, val)
 
 if __name__=="__main__":
     # samples = processSamples()
