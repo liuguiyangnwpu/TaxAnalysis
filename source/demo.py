@@ -9,6 +9,7 @@ import pprint
 import numpy as np
 import codecs
 from sklearn.naive_bayes import GaussianNB
+from sklearn.externals import joblib
 
 from source.UI.TaxUI import Ui_Form
 from source.datawash import excel_table_byname
@@ -49,6 +50,7 @@ class MyMainWidget(QWidget, Ui_Form):
         self.m_trainDir = self.m_dataDir + "train/"
         self.m_testDir = self.m_dataDir + "test/"
         self.m_modelDir = self.m_dataDir + "model/"
+        self.m_modelPath = self.m_modelDir + "lawGaussian.model"
         self.m_keywordsfile = self.m_trainDir + 'keywords.txt'
         self.m_dicfile = self.m_trainDir + 'lawdict.txt'
 
@@ -147,7 +149,9 @@ class MyMainWidget(QWidget, Ui_Form):
 
     def startTrain(self):
         lawinf = '../data/train/law.pkl'
-
+        if self.m_caseTable == None or self.m_labelTableID == None:
+            self.showQMessageBox("请先加载原始数据，并进行特征提取", 'warn')
+            return
         def case2features():
             jieba.load_userdict(self.m_dicfile)
             if self.m_keywords == None:
@@ -186,6 +190,7 @@ class MyMainWidget(QWidget, Ui_Form):
 
         self.m_clf = GaussianNB()
         self.m_clf.fit(features, labels)
+        joblib.dump(self.m_clf, self.m_modelPath)
         self.showQMessageBox("朴素贝叶斯模型训练完成!")
 
     def load_TestSamples(self):
