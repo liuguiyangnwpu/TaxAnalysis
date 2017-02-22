@@ -1,13 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 16 16:08:39 2017
-
-@author: yangsong
-"""
-
 import sys
 from sklearn.naive_bayes import GaussianNB
-from sklearn import svm
 import numpy
 import jieba
 import jieba.posseg
@@ -121,7 +113,6 @@ def ext_feature(textfile=u'file.xls',dicfile=u'dic.txt', keywordsfile=u'keywords
  
     return features
 
-#训练
 def train(textfile=u'file.xlsx',dicfile=u'result_cut_for_search-2.txt',keywordsfile=u'keywords.txt',labelfile=u'labels.txt',lawinf=u'lawinf.dict'):
     #textfile     训练样本文件
     #dicfile      结巴分词字典路径
@@ -133,24 +124,15 @@ def train(textfile=u'file.xlsx',dicfile=u'result_cut_for_search-2.txt',keywordsf
     
     features = ext_feature(textfile=textfile,dicfile=dicfile,keywordsfile=keywordsfile)
     labels   = read_label(labelfile=labelfile,lawinf=lawinf)
-    # print features.shape[0],labels.shape[0]
     
-    if features.shape[0]<=0 or labels.shape[0]<=0 or features.shape[0]!=labels.shape[0]:
+    if features.shape[0] <= 0 or labels.shape[0] <= 0 or features.shape[0] != labels.shape[0]:
         raise ValueError("samples or labels error.")
     
-    clf = GaussianNB()       #训练模型
-    #clf = svm.SVC(kernel='linear')
+    clf = GaussianNB()
     clf.fit(features, labels)
     return clf
 
-#测试
 def predict(textfile=u'file.xls',dicfile=u'dic.txt', keywordsfile=u'keywords.txt',lawinf=u'lawinf.dict',clf = GaussianNB()):
-    #textfile     测试文件
-    #dicfile      结巴分词字典路径
-    #keywordsfile 关键词路径
-    #lawinf       法律法规对应编号
-    #clf          训练的分类模型
-    
     jieba.load_userdict(dicfile)
     
     tables = excel_table_byname(file=textfile)
@@ -182,11 +164,6 @@ def predict(textfile=u'file.xls',dicfile=u'dic.txt', keywordsfile=u'keywords.txt
     return results
     
 def match(labelfile=u'labels.txt',resultfile=u'result.txt',lawinf=u'law.dict'):
-    #labelfile   测试样本结果
-    #resultfile  实际分类结果
-    #lawinf      法律法规对应编号
-    
-    rate = 0.0
     labels   = read_label(labelfile=labelfile,lawinf=lawinf)
     laws = read_lawinf(lawinf=lawinf,keycol=0,valuecol=1)
     lawclass = len(laws)
@@ -210,7 +187,7 @@ def match(labelfile=u'labels.txt',resultfile=u'result.txt',lawinf=u'law.dict'):
     result = numpy.array(result)
     count = result.shape[0]
 
-    def evluation01(standard, sample):
+    def evaluation01(standard, sample):
         a, b = set(), set()
         for i in range(0, len(standard)):
             if standard[i] == '1':
@@ -222,7 +199,7 @@ def match(labelfile=u'labels.txt',resultfile=u'result.txt',lawinf=u'law.dict'):
         if len(b - a) / len(a) <= 0.5: return True
         return False
 
-    def evluation02(standard, sample):
+    def evaluation02(standard, sample):
         a, b = set(), set()
         for i in range(0, len(standard)):
             if standard[i] == '1':
@@ -234,9 +211,22 @@ def match(labelfile=u'labels.txt',resultfile=u'result.txt',lawinf=u'law.dict'):
         if len(a & b): return True
         return False
 
+    def evaluation03(standard, sample):
+        a, b = set(), set()
+        for i in range(0, len(standard)):
+            if standard[i] == '1':
+                a.add(i)
+            if sample[i] == '1':
+                b.add(i)
+        if len(a) == 0 and len(b): return 0.0
+        if len(a) == 0 and len(b) == 0: return 1.0
+        if len(a & b): return len(a&b) / len(a) * 1.0
+        return 0.0
+
+    rate = 0.0
     for i in range(0, len(labels)):
-        if evluation02(labels[i], result[i]):
-            rate += 1
+        val = evaluation03(labels[i], result[i])
+        rate += val
 
     return rate/count
 

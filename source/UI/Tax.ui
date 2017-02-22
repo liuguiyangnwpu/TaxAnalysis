@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>724</width>
-    <height>750</height>
+    <width>910</width>
+    <height>776</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -59,6 +59,19 @@
                </property>
                <property name="text">
                 <string>数据导入</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_extractFeature">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>40</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>特征提取</string>
                </property>
               </widget>
              </item>
@@ -197,12 +210,12 @@
                  <item row="1" column="0">
                   <widget class="QLabel" name="label_4">
                    <property name="text">
-                    <string>字典数量</string>
+                    <string>语料库容量</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineEdit_dictSize">
+                  <widget class="QLineEdit" name="lineEdit_corpusSize">
                    <property name="readOnly">
                     <bool>true</bool>
                    </property>
@@ -250,6 +263,20 @@
                    </property>
                   </widget>
                  </item>
+                 <item row="6" column="0">
+                  <widget class="QLabel" name="label_8">
+                   <property name="text">
+                    <string>召回率</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="1">
+                  <widget class="QLineEdit" name="lineEdit_recallAcc">
+                   <property name="readOnly">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </item>
                <item>
@@ -275,6 +302,16 @@
        </layout>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="textVisible">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item>
@@ -361,7 +398,23 @@
              </column>
              <column>
               <property name="text">
-               <string>法规意见</string>
+               <string>预测法规意见</string>
+              </property>
+              <property name="textAlignment">
+               <set>AlignCenter</set>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>实际法规意见</string>
+              </property>
+              <property name="textAlignment">
+               <set>AlignCenter</set>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>相似度</string>
               </property>
               <property name="textAlignment">
                <set>AlignCenter</set>
