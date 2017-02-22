@@ -5,11 +5,13 @@ import os
 import jieba
 import jieba.posseg
 import jieba.analyse
-import pprint
+import re
 import numpy as np
 import codecs
 from sklearn.naive_bayes import GaussianNB
 from sklearn.externals import joblib
+from sklearn.metrics import classification_report
+from sklearn.metrics import precision_recall_curve
 
 from source.UI.TaxUI import Ui_Form
 from source.datawash import excel_table_byname
@@ -59,6 +61,12 @@ class MyMainWidget(QWidget, Ui_Form):
         self.m_labelTable = None
         self.m_labelTableID = None
         self.m_keywords = None
+
+        self.m_testCaseTable = None
+        self.m_testLabelTable = None
+        self.m_testLabelTableID = None
+        self.m_testPredictTable = None
+
         self.m_clf = None
         self.checkPrepare()
 
@@ -194,10 +202,126 @@ class MyMainWidget(QWidget, Ui_Form):
         self.showQMessageBox("朴素贝叶斯模型训练完成!")
 
     def load_TestSamples(self):
-        pass
+        if self.tableWidget_testBoard.rowCount():
+            button = self.showQMessageBox("确定导入新的数据?", "warn")
+            if button == QMessageBox.Cancel:
+                return
+            else:
+                self.tableWidget_testBoard.clearContents()
+                self.tableWidget_testBoard.clear()
+                self.tableWidget_testBoard.setHorizontalHeaderLabels(['案件描述', '实际法规意见', '预测法规意见', '相似度'])
+        filepath = self.m_testDir + "testcase01.xlsx"
+        tables = excel_table_byname(filepath)
+        self.m_testCaseTable = processSamples(tables)
+        lawpath = self.m_trainDir + "law.info"
+        build_law_label(lawpath)
+        self.m_testLabelTable, self.m_testLabelTableID = processLabels(filepath, tables)
+        self.tableWidget_testBoard.setRowCount(len(tables))
+        ind = 0
+        for i in range(0, len(self.m_testCaseTable)):
+            a, b = ','.join(self.m_testCaseTable[i]) + ".", tables[i]['法规意见']
+            self.tableWidget_testBoard.setItem(ind, 0, QTableWidgetItem(a))
+            self.tableWidget_testBoard.setItem(ind, 1, QTableWidgetItem(b))
+            ind += 1
 
     def startTest(self):
-        pass
+        if self.m_clf == None:
+            if os.path.isfile(self.m_modelPath) == False:
+                self.showQMessageBox("请先进行模型的预训练!", mode='error')
+                return
+            else:
+                self.m_clf = joblib.load(self.m_modelPath)
+
+        lawinf = '../data/base/law.pkl'
+        def label2features():
+            t_labels = []
+            laws = read_lawinf(lawinf=lawinf, keycol=1, valuecol=0)
+            lawclass = len(laws)
+            for line in self.m_testLabelTableID:
+                index = np.zeros(lawclass, dtype=int)  # 根据标签包含的种类进行编号[0,0,1,...,0],以此作为样本标签
+                if len(line) != 0:
+                    for i in range(0, len(line)):
+                        lawindex = line[i].split('-')[0]
+                        index[int(lawindex) - 1] = 1
+                t_labels.append(''.join(list(map(str, list(index)))))
+            return t_labels
+
+        jieba.load_userdict(self.m_dicfile)
+        if self.m_keywords == None:
+            self.m_keywords = read_keywords(self.m_keywordsfile)
+        featlen = len(self.m_keywords)  # 特征维数
+        laws = read_lawinf(lawinf)
+
+        realIDs = label2features()
+        results, predictIDs = [], []
+        for row in self.m_testCaseTable:
+            line = ','.join(row) + "."
+            tags = jieba.analyse.extract_tags(line)
+            feature = np.zeros(featlen, dtype=int)
+            for item in tags:
+                if item in self.m_keywords.keys():
+                    feature[self.m_keywords.get(item)] = 1
+            res = ''.join(self.m_clf.predict(feature.reshape(1, -1)))
+            tmp = []
+            for i in range(0, len(res)):
+                if res[i] == '1':
+                    if i + 1 in laws.keys():
+                        tmp.append(laws[i + 1])
+                    else:
+                        print(str(i + 1))
+                        raise ValueError("laws error.")
+            predictIDs.append(res)
+            results.append(tmp)
+        ## show the predict label on the board
+        for ind, val in enumerate(results):
+            b = ','.join(val)
+            self.tableWidget_testBoard.setItem(ind, 2, QTableWidgetItem(b))
+
+        def evaluation01(standard, sample):
+            a, b = set(), set()
+            for i in range(0, len(standard)):
+                if standard[i] == '1':
+                    a.add(i)
+                if sample[i] == '1':
+                    b.add(i)
+            if len(a) == 0 and len(b): return False
+            if len(a) == 0 and len(b) == 0: return True
+            if len(b - a) / len(a) <= 0.5: return True
+            return False
+
+        def evaluation02(standard, sample):
+            a, b = set(), set()
+            for i in range(0, len(standard)):
+                if standard[i] == '1':
+                    a.add(i)
+                if sample[i] == '1':
+                    b.add(i)
+            if len(a) == 0 and len(b): return False
+            if len(a) == 0 and len(b) == 0: return True
+            if len(a & b): return True
+            return False
+
+        def evaluation03(standard, sample):
+            a, b = set(), set()
+            for i in range(0, len(standard)):
+                if standard[i] == '1':
+                    a.add(i)
+                if sample[i] == '1':
+                    b.add(i)
+            if len(a) == 0 and len(b): return 0.0
+            if len(a) == 0 and len(b) == 0: return 1.0
+            if len(a & b): return len(a & b) / len(a) * 1.0
+            return 0.0
+
+        rate = 0.0
+        for i in range(0, len(realIDs)):
+            val = evaluation03(realIDs[i], predictIDs[i])
+            self.tableWidget_testBoard.setItem(i, 3, QTableWidgetItem(str(val)))
+            rate += val
+
+        a = classification_report(realIDs, predictIDs)
+        print(a.strip().split('\n')[-1].strip())
+        self.showQMessageBox("对于该测试数据集合而言，其准确率为 " + str(rate/len(realIDs)))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -12,6 +12,7 @@ import pickle as pkl
 import pprint
 import numpy as np
 import source.convert_chinese2arabic as chinese2arabic
+import matplotlib.pyplot as plt
 
 def open_excel(file='file.xls'):
     try:
@@ -244,8 +245,19 @@ def build_law_label(filepath):
     # for key, val in law_dict.items():
     #     print(key, val)
 
+def shufleSamples():
+    file = "../data/test/案例报告.xlsx"
+    data = pd.read_excel(file, sheetname="Sheet1")
+    val = data.sample(n=100)
+    savefile = "outfile.xlsx"
+    val.to_excel(savefile, sheet_name="Sheet1")
+
+
 if __name__=="__main__":
     # samples = processSamples()
     # statisticsEvent(samples)
     # build_law_label()
-    processLabels()
+    # processLabels()
+    # plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+    # plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+    shufleSamples()

@@ -231,9 +231,9 @@ class Ui_Form(object):
         item = self.tableWidget_testBoard.horizontalHeaderItem(0)
         item.setText(_translate("Form", "案件描述"))
         item = self.tableWidget_testBoard.horizontalHeaderItem(1)
-        item.setText(_translate("Form", "预测法规意见"))
-        item = self.tableWidget_testBoard.horizontalHeaderItem(2)
         item.setText(_translate("Form", "实际法规意见"))
+        item = self.tableWidget_testBoard.horizontalHeaderItem(2)
+        item.setText(_translate("Form", "预测法规意见"))
         item = self.tableWidget_testBoard.horizontalHeaderItem(3)
         item.setText(_translate("Form", "相似度"))
 

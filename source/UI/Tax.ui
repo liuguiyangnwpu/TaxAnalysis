@@ -398,7 +398,7 @@
              </column>
              <column>
               <property name="text">
-               <string>预测法规意见</string>
+               <string>实际法规意见</string>
               </property>
               <property name="textAlignment">
                <set>AlignCenter</set>
@@ -406,7 +406,7 @@
              </column>
              <column>
               <property name="text">
-               <string>实际法规意见</string>
+               <string>预测法规意见</string>
               </property>
               <property name="textAlignment">
                <set>AlignCenter</set>

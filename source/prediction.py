@@ -220,7 +220,7 @@ def match(labelfile=u'labels.txt',resultfile=u'result.txt',lawinf=u'law.dict'):
                 b.add(i)
         if len(a) == 0 and len(b): return 0.0
         if len(a) == 0 and len(b) == 0: return 1.0
-        if len(a & b): return len(a&b) / len(a) * 1.0
+        if len(a & b): return len(a & b) / len(a) * 1.0
         return 0.0
 
     rate = 0.0
