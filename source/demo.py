@@ -314,14 +314,21 @@ class MyMainWidget(QWidget, Ui_Form):
             return 0.0
 
         rate = 0.0
-        for i in range(0, len(realIDs)):
-            val = evaluation03(realIDs[i], predictIDs[i])
-            self.tableWidget_testBoard.setItem(i, 3, QTableWidgetItem(str(val)))
-            rate += val
+        with open("res.csv", 'w') as handle:
+            for i in range(0, len(realIDs)):
+                val = evaluation03(realIDs[i], predictIDs[i])
+                print(val, file=handle)
+                self.tableWidget_testBoard.setItem(i, 3, QTableWidgetItem(str(val)))
+                rate += val
 
         a = classification_report(realIDs, predictIDs)
-        print(a.strip().split('\n')[-1].strip())
-        self.showQMessageBox("对于该测试数据集合而言，其准确率为 " + str(rate/len(realIDs)))
+        report = a.strip().split('\n')[-1].strip().split('       ')[1].split('      ')
+        info = "对于该测试数据集合而言"
+        p = "其准确率为 " + report[0]
+        r = "其召回率为 " + report[1]
+        f1 = "其F1值为 " + report[2]
+        ap = "其平均相似度为 " + str(rate/len(realIDs))[:7]
+        self.showQMessageBox('\r\n'.join([info, p, r, f1, ap]))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
